@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "mnist-cnn"
+version = "0.1.0"
+description = "Predictions of mnist dataset using CNN"
+authors = ["Parutin Maxim <parutin.ma@phystech.edu>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.13"
+torch = "^2.0.1"
+pandas = "^2.1.1"
+torchvision = "^0.15.2"
+urllib3 = "1.26.6"
+
+[tool.poetry.dev-dependencies]
+pre-commit = "^3.4.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 80
+target-version = ["py39"]
+
+[tool.isort]
+src_paths = ["ds_project"]
+profile = "black"
+line_length = 80
+lines_after_imports = 2

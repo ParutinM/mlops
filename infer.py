@@ -1,27 +1,18 @@
 from __future__ import print_function
 
-import argparse
-
+import fire
 import pandas as pd
 import torch
 from ml_utils.nets import Net
-from ml_utils.utils import test
+from ml_utils.utils import test_model
 from torchvision import datasets, transforms
 
 
-def main():
-    # Training settings
-    parser = argparse.ArgumentParser(description="PyTorch MNIST infer")
-    parser.add_argument(
-        "--model-name",
-        type=str,
-        default="mnist_cnn.pt",
-        metavar="N",
-        help="name of file with model",
-    )
-
-    args = parser.parse_args()
-
+def infer(model_name: str = "mnist_cnn.pt"):
+    """
+    Inferring model
+    :param model_name:       model name
+    """
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
@@ -35,13 +26,13 @@ def main():
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
     model = Net()
-    model.load_state_dict(torch.load(f"results/{args.model_name}"))
+    model.load_state_dict(torch.load(f"results/{model_name}"))
 
-    output = test(model, test_loader)
+    output = test_model(model, test_loader)
     pd.DataFrame(output, columns=["class"]).to_csv(
         "results/predictions.csv", header=False, index=False
     )
 
 
 if __name__ == "__main__":
-    main()
+    fire.Fire(infer)

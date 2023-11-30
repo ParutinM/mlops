@@ -2,7 +2,9 @@ import torch
 import torch.nn.functional as F
 
 
-def train(args, model, device, train_loader, optimizer, epoch):
+def train_model(
+    model, device, train_loader, optimizer, epoch, log_interval, dry_run
+):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -11,7 +13,7 @@ def train(args, model, device, train_loader, optimizer, epoch):
         loss = F.nll_loss(output, target)
         loss.backward()
         optimizer.step()
-        if batch_idx % args.log_interval == 0:
+        if batch_idx % log_interval == 0:
             print(
                 "Train Epoch: {} [{:05d}/{} ({:.0f}%)] \t Loss: {:.6f}".format(
                     epoch,
@@ -22,11 +24,11 @@ def train(args, model, device, train_loader, optimizer, epoch):
                 ),
                 end="\r",
             )
-            if args.dry_run:
+            if dry_run:
                 break
 
 
-def test(model, test_loader):
+def test_model(model, test_loader):
     model.eval()
     test_loss = 0
     correct = 0

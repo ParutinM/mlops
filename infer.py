@@ -1,24 +1,28 @@
 from __future__ import print_function
 
-import fire
+import hydra
 import pandas as pd
 import torch
 from ml_utils.nets import Net
 from ml_utils.utils import test_model
+from omegaconf import DictConfig
 from torchvision import datasets, transforms
 
 
-def infer(model_name: str = "mnist_cnn.pt"):
+@hydra.main(
+    config_path="configs", config_name="config", version_base="1.3"
+)
+def infer(cfg: DictConfig):
     """
     Inferring model
-    :param model_name:       model name
+    :param cfg:         config
     """
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
 
     dataset2 = datasets.MNIST(
-        "data", train=False, download=True, transform=transform
+        cfg.data.path, train=False, download=False, transform=transform
     )
 
     test_kwargs = {"batch_size": len(dataset2)}
@@ -26,7 +30,7 @@ def infer(model_name: str = "mnist_cnn.pt"):
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
     model = Net()
-    model.load_state_dict(torch.load(f"results/{model_name}"))
+    model.load_state_dict(torch.load(f"results/{cfg.model.name}.pt"))
 
     output = test_model(model, test_loader)
     pd.DataFrame(output, columns=["class"]).to_csv(
@@ -35,4 +39,4 @@ def infer(model_name: str = "mnist_cnn.pt"):
 
 
 if __name__ == "__main__":
-    fire.Fire(infer)
+    infer()

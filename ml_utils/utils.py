@@ -34,7 +34,6 @@ def test_model(model, test_loader):
     correct = 0
     with torch.no_grad():
         for data, target in test_loader:
-            # data, target = data.to(device), target.to(device)
             output = model(data)
             test_loss += F.nll_loss(
                 output, target, reduction="sum"
@@ -45,7 +44,6 @@ def test_model(model, test_loader):
             correct += pred.eq(target.view_as(pred)).sum().item()
 
     test_loss /= len(test_loader.dataset)
-    # print("\033[H\033[J", end="")
     print(
         "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
             test_loss,

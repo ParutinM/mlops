@@ -1,46 +1,27 @@
 from __future__ import print_function
 
-import fire
+import hydra
 import torch
 import torch.optim as optim
 from ml_utils.nets import Net
 from ml_utils.utils import train_model
+from omegaconf import DictConfig
 from torch.optim.lr_scheduler import StepLR
 from torchvision import datasets, transforms
 
 
-def train(
-    batch_size: int = 64,
-    epochs: int = 14,
-    lr: float = 1.0,
-    gamma: float = 0.7,
-    no_cuda: bool = False,
-    no_mps: bool = False,
-    log_interval: int = 10,
-    seed: int = 1,
-    dry_run: bool = False,
-    save_model: bool = True,
-    model_name: str = "mnist_cnn",
-):
+@hydra.main(
+    config_path="configs", config_name="config", version_base="1.3"
+)
+def train(cfg: DictConfig):
     """
     Training model
-    :param batch_size:      input batch size for training (default: 64)
-    :param epochs:          number of epochs to train (default: 14)
-    :param lr:              learning rate (default: 1.0)
-    :param gamma:           learning rate step gamma (default: 0.7)
-    :param no_cuda:         disables CUDA training
-    :param no_mps:          disables macOS GPU training
-    :param log_interval:    how many batches to wait before logging
-    :param seed:            random seed (default: 1)
-    :param dry_run:         quickly check a single pass
-    :param save_model:      for saving the current model
-    :param model_name:      model name
+    :param cfg:             config
     """
+    use_cuda = not cfg.training.no_cuda and torch.cuda.is_available()
+    use_mps = not cfg.training.no_mps and torch.backends.mps.is_available()
 
-    use_cuda = not no_cuda and torch.cuda.is_available()
-    use_mps = not no_mps and torch.backends.mps.is_available()
-
-    torch.manual_seed(seed)
+    torch.manual_seed(cfg.training.seed)
 
     if use_cuda:
         device = torch.device("cuda")
@@ -49,7 +30,7 @@ def train(
     else:
         device = torch.device("cpu")
 
-    train_kwargs = {"batch_size": batch_size}
+    train_kwargs = {"batch_size": cfg.training.batch_size}
 
     if use_cuda:
         cuda_kwargs = {
@@ -64,30 +45,30 @@ def train(
     )
 
     dataset1 = datasets.MNIST(
-        "data", train=True, download=True, transform=transform
+        cfg.data.path, train=True, download=False, transform=transform
     )
 
     train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
 
     model = Net().to(device)
-    optimizer = optim.Adadelta(model.parameters(), lr=lr)
+    optimizer = optim.Adadelta(model.parameters(), lr=cfg.training.lr)
 
-    scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
-    for epoch in range(1, epochs + 1):
+    scheduler = StepLR(optimizer, step_size=1, gamma=cfg.training.gamma)
+    for epoch in range(1, cfg.training.epochs + 1):
         train_model(
             model,
             device,
             train_loader,
             optimizer,
             epoch,
-            log_interval,
-            dry_run,
+            cfg.training.log_interval,
+            cfg.training.dry_run,
         )
         scheduler.step()
 
-    if save_model:
-        torch.save(model.state_dict(), f"results/{model_name}.pt")
+    if cfg.training.save_model:
+        torch.save(model.state_dict(), f"results/{cfg.model.name}.pt")
 
 
 if __name__ == "__main__":
-    fire.Fire(train)
+    train()

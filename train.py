@@ -3,6 +3,7 @@ from __future__ import print_function
 import hydra
 import torch
 import torch.optim as optim
+from dvc.repo import Repo
 from ml_utils.nets import Net
 from ml_utils.utils import train_model
 from omegaconf import DictConfig
@@ -43,6 +44,9 @@ def train(cfg: DictConfig):
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
+
+    repo = Repo(".")
+    repo.pull()
 
     dataset1 = datasets.MNIST(
         cfg.data.path, train=True, download=False, transform=transform

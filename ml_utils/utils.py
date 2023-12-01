@@ -1,10 +1,14 @@
 import torch
 import torch.nn.functional as F
+import wandb
+from torchmetrics.classification import MulticlassAccuracy
 
 
 def train_model(
     model, device, train_loader, optimizer, epoch, log_interval, dry_run
 ):
+    accuracy = MulticlassAccuracy(num_classes=10)
+
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -24,8 +28,26 @@ def train_model(
                 ),
                 end="\r",
             )
+            wandb.log(
+                {
+                    "accuracy": accuracy(
+                        output.cpu(), target.cpu()
+                    ).item(),
+                    "loss": loss.item(),
+                    "epoch": epoch,
+                }
+            )
             if dry_run:
                 break
+    wandb.log(
+        {
+            "conf_matrix": wandb.plot.confusion_matrix(
+                probs=output.cpu().detach().numpy(),
+                y_true=target.cpu().detach().numpy(),
+                class_names=list(range(10)),
+            )
+        }
+    )
 
 
 def test_model(model, test_loader):

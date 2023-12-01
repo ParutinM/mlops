@@ -3,7 +3,6 @@ from __future__ import print_function
 import hydra
 import pandas as pd
 import torch
-from dvc.repo import Repo
 from ml_utils.nets import Net
 from ml_utils.utils import test_model
 from omegaconf import DictConfig
@@ -21,9 +20,6 @@ def infer(cfg: DictConfig):
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
-
-    repo = Repo(".")
-    repo.pull()
 
     dataset2 = datasets.MNIST(
         cfg.data.path, train=False, download=False, transform=transform

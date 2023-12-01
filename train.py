@@ -1,8 +1,11 @@
 from __future__ import print_function
 
+import os
+
 import hydra
 import torch
 import torch.optim as optim
+import wandb
 from dvc.repo import Repo
 from ml_utils.nets import Net
 from ml_utils.utils import train_model
@@ -19,6 +22,7 @@ def train(cfg: DictConfig):
     Training model
     :param cfg:             config
     """
+    os.environ["WANDB_SILENT"] = "true"
     use_cuda = not cfg.training.no_cuda and torch.cuda.is_available()
     use_mps = not cfg.training.no_mps and torch.backends.mps.is_available()
 
@@ -45,6 +49,7 @@ def train(cfg: DictConfig):
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
 
+    print("Loading data...")
     repo = Repo(".")
     repo.pull()
 
@@ -57,6 +62,7 @@ def train(cfg: DictConfig):
     model = Net().to(device)
     optimizer = optim.Adadelta(model.parameters(), lr=cfg.training.lr)
 
+    wandb.init(name="MNIST CNN")
     scheduler = StepLR(optimizer, step_size=1, gamma=cfg.training.gamma)
     for epoch in range(1, cfg.training.epochs + 1):
         train_model(
@@ -69,6 +75,8 @@ def train(cfg: DictConfig):
             cfg.training.dry_run,
         )
         scheduler.step()
+
+    wandb.finish()
 
     if cfg.training.save_model:
         torch.save(model.state_dict(), f"results/{cfg.model.name}.pt")

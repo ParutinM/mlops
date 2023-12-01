@@ -1,11 +1,12 @@
 data:
+  name: MNIST
   path: data
   url: gdrive://1zQqlTQ2qcfPGL1gbe05-Ttr7r-EXhUhH
 model:
   name: mnist_cnn
 training:
   batch_size: 64
-  epochs: 14
+  epochs: 5
   lr: 1.0
   gamma: 0.7
   no_cuda: False

@@ -4,14 +4,12 @@ data:
   url: gdrive://1zQqlTQ2qcfPGL1gbe05-Ttr7r-EXhUhH
 model:
   name: mnist_cnn
+  n_classes: 10
 training:
   batch_size: 64
   epochs: 5
-  lr: 1.0
+  lr: 0.1
   gamma: 0.7
-  no_cuda: False
-  no_mps: False
-  log_interval: 10
   seed: 1
-  dry_run: False
   save_model: True
+  accelerator: gpu

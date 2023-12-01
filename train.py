@@ -1,86 +1,97 @@
 from __future__ import print_function
 
-import os
+import subprocess
 
 import hydra
 import torch
-import torch.optim as optim
-import wandb
 from dvc.repo import Repo
-from ml_utils.nets import Net
-from ml_utils.utils import train_model
+from ml_utils.model import CnnMNIST, LogPredictionsCallback
+from ml_utils.utils import data_exists
 from omegaconf import DictConfig
-from torch.optim.lr_scheduler import StepLR
+from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import MLFlowLogger, WandbLogger
+from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 
 
 @hydra.main(
     config_path="configs", config_name="config", version_base="1.3"
 )
-def train(cfg: DictConfig):
+def main(cfg: DictConfig):
     """
     Training model
     :param cfg:             config
     """
-    os.environ["WANDB_SILENT"] = "true"
-    use_cuda = not cfg.training.no_cuda and torch.cuda.is_available()
-    use_mps = not cfg.training.no_mps and torch.backends.mps.is_available()
-
+    # set seed
     torch.manual_seed(cfg.training.seed)
 
-    if use_cuda:
-        device = torch.device("cuda")
-    elif use_mps:
-        device = torch.device("mps")
-    else:
-        device = torch.device("cpu")
-
-    train_kwargs = {"batch_size": cfg.training.batch_size}
-
-    if use_cuda:
-        cuda_kwargs = {
-            "num_workers": 1,
-            "pin_memory": True,
-            "shuffle": True,
-        }
-        train_kwargs.update(cuda_kwargs)
-
+    # transformation of MNIST dataset
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
 
-    print("Loading data...")
-    repo = Repo(".")
-    repo.pull()
+    if not data_exists():
+        # pull data from DVC
+        repo = Repo(".")
+        repo.pull()
 
-    dataset1 = datasets.MNIST(
-        cfg.data.path, train=True, download=False, transform=transform
+    # split to train and val parts
+    dataset = datasets.MNIST(
+        cfg.data.path, train=True, transform=transform
+    )
+    training_set, validation_set = random_split(dataset, [55000, 5000])
+
+    # create loaders
+    training_loader = DataLoader(
+        training_set, batch_size=cfg.training.batch_size, shuffle=True
+    )
+    validation_loader = DataLoader(
+        validation_set, batch_size=cfg.training.batch_size
     )
 
-    train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
+    # create model
+    model = CnnMNIST(cfg)
 
-    model = Net().to(device)
-    optimizer = optim.Adadelta(model.parameters(), lr=cfg.training.lr)
+    # create loggers
+    loggers = [
+        MLFlowLogger(
+            cfg.model.name,
+            tracking_uri="file:./.logs/mlflow-logs",
+            run_name=subprocess.check_output(["git", "rev-parse", "HEAD"])
+            .strip()
+            .decode(),
+        ),
+        WandbLogger(
+            project=cfg.model.name,
+            config={
+                "learning_rate": cfg.training.lr,
+                "epochs": cfg.training.epochs,
+                "batch_size": cfg.training.batch_size,
+            },
+        ),
+    ]
 
-    wandb.init(name="MNIST CNN")
-    scheduler = StepLR(optimizer, step_size=1, gamma=cfg.training.gamma)
-    for epoch in range(1, cfg.training.epochs + 1):
-        train_model(
-            model,
-            device,
-            train_loader,
-            optimizer,
-            epoch,
-            cfg.training.log_interval,
-            cfg.training.dry_run,
-        )
-        scheduler.step()
+    # create callbacks
+    callbacks = [
+        LogPredictionsCallback(),
+        ModelCheckpoint(monitor="val_accuracy"),
+    ]
 
-    wandb.finish()
+    # train model
+    trainer = Trainer(
+        logger=loggers,
+        callbacks=callbacks,
+        accelerator=cfg.training.accelerator,
+        max_epochs=cfg.training.epochs,
+    )
 
+    trainer.fit(model, training_loader, validation_loader)
+
+    # saving model
     if cfg.training.save_model:
-        torch.save(model.state_dict(), f"results/{cfg.model.name}.pt")
+        trainer.save_checkpoint(f"./results/{cfg.model.name}.ckpt")
 
 
 if __name__ == "__main__":
-    train()
+    main()

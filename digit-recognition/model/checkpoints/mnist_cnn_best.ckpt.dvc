@@ -1,0 +1,5 @@
+outs:
+- md5: 191819af7b4cbc103c685513abf91b75
+  size: 14412570
+  hash: md5
+  path: mnist_cnn_best.ckpt

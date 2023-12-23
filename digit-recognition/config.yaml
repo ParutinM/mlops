@@ -1,0 +1,38 @@
+data:
+  name: MNIST
+  path: data
+  raw_folder: MNIST/raw
+  url: gdrive://1zQqlTQ2qcfPGL1gbe05-Ttr7r-EXhUhH
+  train:
+    images: train-images-idx3-ubyte
+    labels: train-labels-idx1-ubyte
+  infer:
+    images: t10k-images-idx3-ubyte
+    labels: t10k-labels-idx1-ubyte
+
+model:
+  path: model
+  task: "MNIST_digit_recognition"
+  name: mnist_cnn
+  n_classes: 10
+  checkpoints_path: checkpoints
+  best_checkpoint_name: mnist_cnn_best.ckpt
+
+training:
+  batch_size: 64
+  epochs: 5
+  lr: 0.1
+  gamma: 0.7
+  seed: 1
+  save_model: True
+  accelerator: gpu
+  use_local_data: True
+  data_loader_num_workers: 7
+  mlflow_server: http://127.0.0.1:5000
+
+inferring:
+  seed: 1
+  use_local_data: True
+  use_local_model: True
+  data_loader_num_workers: 7
+  mlflow_server: http://127.0.0.1:5000

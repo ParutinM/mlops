@@ -1,5 +1,0 @@
-outs:
-- md5: 73349ff329de5adc06939bfbd6aea437
-  size: 14410778
-  hash: md5
-  path: mnist_cnn.ckpt
